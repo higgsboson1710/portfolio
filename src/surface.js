@@ -38,7 +38,7 @@ const ENV_BUILDERS = {
   about: buildCityEnvironment,
   education: buildMountainCampus,
   projects: buildTechLab,
-  skills: buildDigitalWorld,
+  skills: buildBeachForest,
   achievements: buildArena,
   competitive: buildDigitalArena,
   contact: buildMountainLake,
@@ -392,81 +392,65 @@ function buildTechLab() {
     group.add(pl);
   });
 
-  // Nature: fireflies in the lab
-  addFireflies(group, 20, 5, 0x00ff88);
+  // 3D Hologram Labels for projects
+  const labels = [
+    { text: 'FALL DETECTION', pos: [8, 5, 0] },
+    { text: 'INSURANCE ML', pos: [-8, 5, 4] },
+    { text: 'PATIENT API', pos: [0, 6, -8] },
+  ];
+  labels.forEach(l => {
+    const holo = createHologramLabel(l.text, 0x00ff88);
+    holo.position.set(...l.pos);
+    group.add(holo);
+  });
 
   return group;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 4. DIGITAL WORLD — Abstract floating platforms
+// 4. BEACH & FOREST — Tropical paradise (Skills)
 // ═══════════════════════════════════════════════════════════════
-function buildDigitalWorld() {
+function buildBeachForest() {
   const group = new THREE.Group();
 
-  // Floating platforms at various heights
-  for (let i = 0; i < 20; i++) {
-    const size = 2 + Math.random() * 5;
-    const geo = new THREE.BoxGeometry(size, 0.3, size);
-    const mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color().setHSL(0.8 + Math.random() * 0.15, 0.7, 0.15),
-      metalness: 0.8, roughness: 0.2,
-      emissive: new THREE.Color().setHSL(0.8 + Math.random() * 0.15, 0.9, 0.05),
-    });
-    const platform = new THREE.Mesh(geo, mat);
-    platform.position.set(
-      (Math.random() - 0.5) * 40,
-      Math.random() * 10 - 2,
-      (Math.random() - 0.5) * 40
-    );
-    platform.rotation.y = Math.random() * Math.PI;
-    group.add(platform);
+  // Terrain - Sand to Grass transition
+  const terrain = createTerrain(80, 80, 100, 100, 4, 0.08, 'tropical');
+  group.add(terrain);
 
-    // Edge glow
-    const edgeGeo = new THREE.EdgesGeometry(geo);
-    const edgeMat = new THREE.LineBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5 });
-    const edges = new THREE.LineSegments(edgeGeo, edgeMat);
-    platform.add(edges);
-  }
+  // Ocean
+  addWater(group, 0, 0.2, 15, 80, 50);
 
-  // Data streams (vertical lines of particles)
+  // Palm Trees on the beach
   for (let i = 0; i < 15; i++) {
-    const streamGeo = new THREE.BufferGeometry();
-    const points = [];
-    const x = (Math.random() - 0.5) * 40;
-    const z = (Math.random() - 0.5) * 40;
-    for (let j = 0; j < 30; j++) {
-      points.push(x + (Math.random() - 0.5) * 0.3, j * 0.5 - 5, z + (Math.random() - 0.5) * 0.3);
-    }
-    streamGeo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-    const streamMat = new THREE.PointsMaterial({
-      color: [0xff00ff, 0xaa00ff, 0xff66aa][Math.floor(Math.random() * 3)],
-      size: 0.15, transparent: true, opacity: 0.6,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    });
-    group.add(new THREE.Points(streamGeo, streamMat));
+    const palm = createPalmTree();
+    const x = (Math.random() - 0.5) * 60;
+    const z = -5 - Math.random() * 10;
+    palm.position.set(x, 0, z);
+    palm.rotation.y = Math.random() * Math.PI * 2;
+    group.add(palm);
   }
 
-  // Central structure
-  const torusGeo = new THREE.TorusKnotGeometry(3, 0.5, 100, 16);
-  const torusMat = new THREE.MeshStandardMaterial({
-    color: 0x220044, emissive: 0x660099, emissiveIntensity: 0.3,
-    metalness: 0.9, roughness: 0.1, wireframe: false,
-  });
-  const torus = new THREE.Mesh(torusGeo, torusMat);
-  torus.position.y = 4;
-  torus.userData.spin = true;
-  group.add(torus);
+  // Dense forest at the back
+  for (let i = 0; i < 40; i++) {
+    const tree = createTree();
+    const x = (Math.random() - 0.5) * 70;
+    const z = -20 - Math.random() * 20;
+    tree.position.set(x, 0, z);
+    tree.userData.isTree = true;
+    group.add(tree);
+  }
 
-  // Lighting
-  group.add(new THREE.AmbientLight(0x220033, 0.4));
-  group.add(new THREE.PointLight(0xff00ff, 2, 30));
-  const pl2 = new THREE.PointLight(0x8800ff, 1.5, 25);
-  pl2.position.set(10, 5, -10);
-  group.add(pl2);
+  // Nature: birds, butterflies, clouds
+  addBirdFlock(group, 6, 15, 30);
+  addButterflies(group, 10, 5);
+  addClouds(group, 5, 25);
+  addFireflies(group, 20, 6, 0xffffaa); // Sandy fireflies
 
-  // Nature: glowing spores floating
-  addFireflies(group, 40, 12, 0xff00ff);
+  // Lighting — bright tropical sun
+  group.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const sun = new THREE.DirectionalLight(0xfff4d6, 1.2);
+  sun.position.set(40, 50, 20);
+  group.add(sun);
 
   return group;
 }
@@ -542,9 +526,10 @@ function buildArena() {
   warmLight.position.set(10, 20, 10);
   group.add(warmLight);
 
-  // Nature: butterflies and golden petals
-  addButterflies(group, 8, 6);
-  addFallingLeaves(group, 30, 12, 0xffcc33);
+  // 3D Hologram Label for Rank
+  const rankLabel = createHologramLabel('GLOBAL RANK 62', 0xffcc00);
+  rankLabel.position.set(0, 8, 0);
+  group.add(rankLabel);
 
   return group;
 }
@@ -689,13 +674,39 @@ function buildMountainLake() {
   group.add(sun);
   const fill = new THREE.DirectionalLight(0x8888cc, 0.3);
   fill.position.set(20, 10, -20);
-  group.add(fill);
+    group.add(fill);
 
   return group;
 }
 
+function createHologramLabel(text, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  
+  // HUD-style background
+  ctx.fillStyle = 'rgba(0, 50, 50, 0.4)';
+  ctx.fillRect(0, 0, 512, 128);
+  ctx.strokeStyle = `rgb(${(color >> 16) & 255}, ${(color >> 8) & 255}, ${color & 255})`;
+  ctx.lineWidth = 10;
+  ctx.strokeRect(5, 5, 502, 118);
+
+  ctx.font = 'bold 50px Orbitron, sans-serif';
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 64);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(6, 1.5, 1);
+  return sprite;
+}
+
 // ═══════════════════════════════════════════════════════════════
-// SHARED HELPERS
+// Update Loop Extension
 // ═══════════════════════════════════════════════════════════════
 
 function createTerrain(w, d, segW, segD, maxHeight, noiseScale, type) {
@@ -725,7 +736,11 @@ function createTerrain(w, d, segW, segD, maxHeight, noiseScale, type) {
       else if (t < 0.25) { colors[i*3] = 0.2; colors[i*3+1] = 0.5; colors[i*3+2] = 0.15; } // grass
       else if (t < 0.5) { colors[i*3] = 0.25; colors[i*3+1] = 0.4; colors[i*3+2] = 0.12; } // dark grass
       else if (t < 0.7) { colors[i*3] = 0.45; colors[i*3+1] = 0.35; colors[i*3+2] = 0.25; } // rock
-      else { colors[i*3] = 0.9; colors[i*3+1] = 0.92; colors[i*3+2] = 0.95; } // snow
+      else { colors[i*3] = 0.85; colors[i*3+1] = 0.87; colors[i*3+2] = 0.9; }
+    } else if (type === 'tropical') {
+      if (t < 0.2) { colors[i*3] = 0.95; colors[i*3+1] = 0.92; colors[i*3+2] = 0.75; } // Sand
+      else if (t < 0.5) { colors[i*3] = 0.2; colors[i*3+1] = 0.55; colors[i*3+2] = 0.15; } // Grass
+      else { colors[i*3] = 0.15; colors[i*3+1] = 0.4; colors[i*3+2] = 0.1; } // Dark foliage
     } else {
       if (t < 0.15) { colors[i*3] = 0.18; colors[i*3+1] = 0.45; colors[i*3+2] = 0.12; }
       else if (t < 0.4) { colors[i*3] = 0.22; colors[i*3+1] = 0.38; colors[i*3+2] = 0.1; }
@@ -743,6 +758,41 @@ function createTerrain(w, d, segW, segD, maxHeight, noiseScale, type) {
   });
 
   return new THREE.Mesh(geo, mat);
+}
+
+function createPalmTree() {
+  const palm = new THREE.Group();
+  
+  // Trunk - curved
+  const points = [];
+  for (let i = 0; i < 10; i++) {
+    const t = i / 10;
+    points.push(new THREE.Vector2(Math.sin(t * 1.5) * 0.5, i * 0.4));
+  }
+  const trunkGeo = new THREE.CylinderGeometry(0.1, 0.18, 4, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x664422, roughness: 0.9 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 2;
+  trunk.rotation.z = 0.1;
+  palm.add(trunk);
+
+  // Leaves
+  const leafCount = 8;
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x228833, side: THREE.DoubleSide });
+  for (let i = 0; i < leafCount; i++) {
+    const leafGeo = new THREE.PlaneGeometry(0.5, 2);
+    leafGeo.rotateX(-Math.PI / 2);
+    leafGeo.translate(0, 0, 1);
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    leaf.position.y = 4;
+    leaf.rotation.y = (i / leafCount) * Math.PI * 2;
+    leaf.rotation.x = 0.2 + Math.random() * 0.2;
+    palm.add(leaf);
+  }
+
+  const scale = 0.8 + Math.random() * 0.6;
+  palm.scale.set(scale, scale, scale);
+  return palm;
 }
 
 function createTree() {
@@ -986,64 +1036,128 @@ export function updateSurface(time) {
     waterUniforms.uTime.value = t;
   }
 
-  // Animate all objects
-  activeGroup.traverse(obj => {
-    if (obj.userData.spin) {
-      obj.rotation.y += 0.005;
-      obj.rotation.x += 0.002;
-    }
-    const c = obj.userData.creature;
-    if (c === 'bird') {
-      obj.userData.angle += obj.userData.speed;
-      const a = obj.userData.angle;
-      const r = obj.userData.radius;
-      obj.position.x = Math.cos(a) * r;
-      obj.position.z = Math.sin(a) * r;
-      obj.position.y = obj.userData.baseY + Math.sin(t * 0.5 + a) * 1.5;
-      obj.rotation.y = -a + Math.PI / 2;
-      // Wing flap
+  // Animate all objects in the active group
+  activeGroup.children.forEach(c => {
+    if (!c.userData) return;
+    
+    // Animation based on creature type/userData
+    const ud = c.userData;
+
+    if (ud.creature === 'bird') {
+      ud.angle += ud.speed;
+      c.position.x = Math.cos(ud.angle) * ud.radius;
+      c.position.z = Math.sin(ud.angle) * ud.radius;
+      c.position.y = (ud.baseY || 0) + Math.sin(t * 0.5 + ud.angle) * 1.5;
+      c.rotation.y = -ud.angle + Math.PI / 2;
       const flap = Math.sin(t * 8) * 0.5;
-      if (obj.userData.wingL) obj.userData.wingL.rotation.z = flap;
-      if (obj.userData.wingR) obj.userData.wingR.rotation.z = -flap;
-    }
-    if (c === 'butterfly') {
-      const bp = obj.userData.basePos;
-      const w = obj.userData.wobble;
-      obj.position.x = bp.x + Math.sin(t * obj.userData.speed + w) * 3;
-      obj.position.z = bp.z + Math.cos(t * obj.userData.speed * 0.7 + w) * 3;
-      obj.position.y = bp.y + Math.sin(t * 1.5 + w) * 0.8;
-      // Wing flap — fast
-      const flap = Math.sin(t * 12 + w) * 0.7;
-      if (obj.userData.wingL) obj.userData.wingL.rotation.z = flap;
-      if (obj.userData.wingR) obj.userData.wingR.rotation.z = -flap;
-    }
-    if (c === 'firefly') {
-      const bp = obj.userData.basePos;
-      const p = obj.userData.phase;
-      const s = obj.userData.speed;
-      obj.position.x = bp.x + Math.sin(t * s + p) * 2;
-      obj.position.y = bp.y + Math.sin(t * s * 0.8 + p * 2) * 1.5;
-      obj.position.z = bp.z + Math.cos(t * s * 0.6 + p) * 2;
-      // Pulse glow
-      obj.material.opacity = 0.3 + Math.sin(t * 3 + p) * 0.5;
-      const sc = 0.8 + Math.sin(t * 3 + p) * 0.4;
-      obj.scale.set(sc, sc, sc);
-    }
-    if (c === 'leaf') {
-      obj.position.y -= obj.userData.fallSpeed;
-      obj.position.x += Math.sin(t * obj.userData.swaySpeed) * obj.userData.swayAmp;
-      obj.rotation.x += 0.01;
-      obj.rotation.z += 0.008;
-      // Reset when fallen
-      if (obj.position.y < -1) {
-        obj.position.y = obj.userData.maxY;
-        obj.position.x = (Math.random()-0.5)*30;
-        obj.position.z = (Math.random()-0.5)*30;
+      if (ud.wingL) ud.wingL.rotation.z = flap;
+      if (ud.wingR) ud.wingR.rotation.z = -flap;
+    } 
+    else if (ud.creature === 'butterfly') {
+      const panicMult = ud.panic ? 5 : 1;
+      ud.wobble += 0.05 * panicMult;
+      const bp = ud.basePos || c.position;
+      c.position.y = bp.y + Math.sin(ud.wobble) * 1;
+      c.position.x += Math.sin(ud.wobble * 0.5) * 0.02 * panicMult;
+      c.position.z += Math.cos(ud.wobble * 0.5) * 0.02 * panicMult;
+      const flap = Math.sin(t * 12 * panicMult + ud.wobble) * 0.7;
+      if (ud.wingL) ud.wingL.rotation.z = flap;
+      if (ud.wingR) ud.wingR.rotation.z = -flap;
+      if (ud.panic) {
+        ud.panicTimer--;
+        if (ud.panicTimer <= 0) ud.panic = false;
+      }
+    } 
+    else if (ud.creature === 'firefly') {
+      const bp = ud.basePos || c.position;
+      const p = ud.phase || 0;
+      const s = ud.speed || 1;
+      const flashMult = ud.flash ? 2 : 1;
+      c.position.x = bp.x + Math.sin(t * s * flashMult + p) * 2;
+      c.position.y = bp.y + Math.sin(t * s * 0.8 + p * 2) * 1.5;
+      c.position.z = bp.z + Math.cos(t * s * 0.6 + p) * 2;
+      c.material.opacity = (ud.flash ? 1.0 : 0.3 + Math.sin(t * 3 + p) * 0.5);
+      const sc = (ud.flash ? 1.5 : 1) * (0.8 + Math.sin(t * 3 + p) * 0.2);
+      c.scale.set(sc, sc, sc);
+      if (ud.flash) {
+        ud.flashTimer--;
+        if (ud.flashTimer <= 0) { ud.flash = false; c.scale.setScalar(1); }
       }
     }
-    if (c === 'cloud') {
-      obj.position.x += obj.userData.speed * obj.userData.drift;
-      if (Math.abs(obj.position.x) > 40) obj.userData.drift *= -1;
+    else if (ud.type === 'leaf' || ud.isBurstLeaf) {
+      c.position.y -= ud.fallSpeed || 0.02;
+      c.position.x += Math.sin(t * (ud.swaySpeed || 1)) * (ud.swayAmp || 0.1);
+      c.rotation.x += 0.01;
+      c.rotation.z += 0.008;
+      if (ud.isBurstLeaf) {
+        ud.life--;
+        c.material.opacity = ud.life / 100;
+        if (ud.life <= 0) activeGroup.remove(c);
+      } else if (c.position.y < -1) {
+        c.position.y = ud.maxY || 20;
+      }
+    }
+    else if (ud.type === 'cloud') {
+      c.position.x += (ud.speed || 0.01) * (ud.drift || 1);
+      if (Math.abs(c.position.x) > 40) ud.drift = -(ud.drift || 1);
+    }
+    else if (ud.isTree && ud.shaking) {
+      ud.shakeTimer--;
+      c.rotation.z = Math.sin(ud.shakeTimer * 1.2) * 0.08;
+      if (ud.shakeTimer <= 0) {
+        ud.shaking = false;
+        c.rotation.z = 0;
+      }
+    }
+    else if (ud.spin) {
+      c.rotation.y += 0.01;
+      c.rotation.z += 0.005;
     }
   });
+}
+
+export function handleNatureInteraction(object) {
+  if (!object) return;
+  
+  // Climb up to find the interactive parent
+  let root = object;
+  while (root && !root.userData?.creature && !root.userData?.isTree && root.parent && root.parent !== activeGroup) {
+    root = root.parent;
+  }
+
+  if (!root || !root.userData) return;
+  const ud = root.userData;
+
+  if (ud.creature === 'butterfly') {
+    ud.panic = true;
+    ud.panicTimer = 120;
+  } else if (ud.creature === 'firefly') {
+    ud.flash = true;
+    ud.flashTimer = 60;
+  } else if (ud.isTree) {
+    shakeTree(root);
+  }
+}
+
+function shakeTree(tree) {
+  if (tree.userData.shaking) return;
+  tree.userData.shaking = true;
+  tree.userData.shakeTimer = 40;
+  
+  // Explode some leaves
+  for (let i = 0; i < 8; i++) {
+    const leafGeo = new THREE.PlaneGeometry(0.2, 0.2);
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x228833, side: THREE.DoubleSide, transparent: true });
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    leaf.position.copy(tree.position);
+    leaf.position.y += 2 + Math.random() * 2;
+    leaf.position.x += (Math.random()-0.5) * 1;
+    leaf.position.z += (Math.random()-0.5) * 1;
+    leaf.userData.isBurstLeaf = true;
+    leaf.userData.life = 100;
+    leaf.userData.fallSpeed = 0.05 + Math.random() * 0.05;
+    leaf.userData.swaySpeed = 2 + Math.random() * 2;
+    leaf.userData.swayAmp = 0.1 + Math.random() * 0.2;
+    activeGroup.add(leaf);
+  }
 }

@@ -39,10 +39,6 @@ export function getControls() {
   return controls;
 }
 
-export function getCurrentView() {
-  return currentView;
-}
-
 export function zoomToPlanet(camera, planet, onComplete) {
   if (isTransitioning) return;
   isTransitioning = true;
@@ -61,24 +57,7 @@ export function zoomToPlanet(camera, planet, onComplete) {
   const offset = new THREE.Vector3(radius * 3, radius * 2, radius * 3);
   const camTarget = targetPos.clone().add(offset);
 
-  // Animate camera
-  gsap.to(camera.position, {
-    x: camTarget.x,
-    y: camTarget.y,
-    z: camTarget.z,
-    duration: 2,
-    ease: 'power3.inOut',
-    onUpdate: () => {
-      camera.lookAt(targetPos);
-    },
-  });
-
-  gsap.to(controls.target, {
-    x: targetPos.x,
-    y: targetPos.y,
-    z: targetPos.z,
-    duration: 2,
-    ease: 'power3.inOut',
+  const tl = gsap.timeline({
     onComplete: () => {
       isTransitioning = false;
       controls.enabled = true;
@@ -86,8 +65,46 @@ export function zoomToPlanet(camera, planet, onComplete) {
       controls.maxDistance = radius * 12;
       controls.update();
       if (onComplete) onComplete();
-    },
+    }
   });
+
+  // Core Zoom
+  tl.to(camera.position, {
+    x: camTarget.x,
+    y: camTarget.y,
+    z: camTarget.z,
+    duration: 2.2,
+    ease: 'power3.inOut',
+    onUpdate: () => {
+      // Add camera shake during the latter half of the transition
+      const progress = tl.progress();
+      if (progress > 0.6 && progress < 0.95) {
+        const intensity = (progress - 0.6) * 0.5; // Increases as we get closer
+        camera.position.x += (Math.random() - 0.5) * intensity;
+        camera.position.y += (Math.random() - 0.5) * intensity;
+      }
+      camera.lookAt(targetPos);
+    }
+  }, 0);
+
+  tl.to(controls.target, {
+    x: targetPos.x,
+    y: targetPos.y,
+    z: targetPos.z,
+    duration: 2.2,
+    ease: 'power3.inOut',
+  }, 0);
+
+  // VFX: Speed Lines
+  const speedLines = document.getElementById('speed-lines');
+  const entryFlash = document.getElementById('entry-flash');
+
+  tl.to(speedLines, { opacity: 1, duration: 0.8 }, 0.8);
+  tl.to(speedLines, { opacity: 0, duration: 0.4 }, 1.8);
+
+  // VFX: Flash
+  tl.to(entryFlash, { opacity: 1, duration: 0.2 }, 1.9);
+  tl.to(entryFlash, { opacity: 0, duration: 0.8 }, 2.1);
 }
 
 export function zoomOut(camera, onComplete) {

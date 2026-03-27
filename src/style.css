@@ -110,7 +110,36 @@ html, body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  overflow: hidden;
+  z-index: 15;
+}
+
+/* ─── Cinematic Transition FX ─── */
+.speed-lines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, transparent 20%, rgba(255,255,255,0.1) 60%, rgba(255,255,255,0.3) 100%);
+  mask-image: repeating-conic-gradient(from 0deg, black 0deg 3deg, transparent 3deg 6deg);
+  -webkit-mask-image: repeating-conic-gradient(from 0deg, black 0deg 3deg, transparent 3deg 6deg);
+  filter: blur(2px);
+  transform: scale(1.5);
+}
+
+.entry-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  background: white;
 }
 
 .env-particle {

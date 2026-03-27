@@ -6,8 +6,9 @@ import './style.css';
 import { PLANET_CONFIG, PROFILE } from './data.js';
 import { createWorld, updateWorld, getPlanetMeshes, getPlanetWorldPosition } from './world.js';
 import { initCamera, updateCamera, zoomToPlanet, zoomOut, playIntro } from './camera.js';
-import { createSurface, showSurface, hideSurface, updateSurface } from './surface.js';
+import { createSurface, showSurface, hideSurface, updateSurface, handleNatureInteraction } from './surface.js';
 import { showSection, hideSection, createPlanetLabels, initChatbot } from './ui.js';
+import { initAudio, playSoundscape } from './audio.js';
 
 // ─── Globals ───
 let scene, camera, renderer, clock;
@@ -25,7 +26,7 @@ const ENV_IMAGES = {
   about: '/environments/about.png',
   education: '/environments/education.png',
   projects: '/environments/projects.png',
-  skills: '/environments/skills.png',
+  skills: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=2073', // Tropical Beach
   achievements: '/environments/achievements.png',
   competitive: '/environments/competitive.png',
   contact: '/environments/contact.png',
@@ -33,66 +34,55 @@ const ENV_IMAGES = {
 
 // ─── Init ───
 function init() {
-  clock = new THREE.Clock();
+  try {
+    clock = new THREE.Clock();
 
-  // Scene
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000010);
-  scene.fog = new THREE.FogExp2(0x000010, 0.0015);
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000010);
+    scene.fog = new THREE.FogExp2(0x000010, 0.0015);
 
-  // Camera
-  camera = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    2000
-  );
+    // Camera
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
 
-  // Renderer
-  const canvas = document.getElementById('universe-canvas');
-  renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-  });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Renderer
+    const canvas = document.getElementById('universe-canvas');
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  // Raycaster for click detection
-  raycaster = new THREE.Raycaster();
-  mouse = new THREE.Vector2();
+    // Raycaster
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
 
-  // Create the universe
-  simulateLoading(() => {
-    world = createWorld(scene);
-    surface = createSurface(scene);
+    // Start Loading
+    simulateLoading(() => {
+      try {
+        world = createWorld(scene);
+        surface = createSurface(scene);
+        initCamera(camera, renderer.domElement);
+        planetLabels = createPlanetLabels(PLANET_CONFIG);
+        initChatbot();
+        setupEvents();
+        hideLoader();
+        initAudio();
+        
+        playIntro(camera, () => {
+          document.getElementById('hint').classList.remove('hidden');
+        });
 
-    // Camera controls
-    const controls = initCamera(camera, renderer.domElement);
-
-    // Planet labels
-    planetLabels = createPlanetLabels(PLANET_CONFIG);
-
-    // Chatbot
-    initChatbot();
-
-    // Event listeners
-    setupEvents();
-
-    // Hide loader, show UI
-    hideLoader();
-
-    // Play intro animation
-    playIntro(camera, () => {
-      document.getElementById('hint').classList.remove('hidden');
+        animate();
+      } catch (err) {
+        console.error("Initialization Error:", err);
+        document.getElementById('loader-subtitle').textContent = "Initialization Failed: " + err.message;
+      }
     });
-
-    // Start render loop
-    animate();
-  });
+  } catch (err) {
+    console.error("Critical Failure:", err);
+  }
 }
 
 // ─── Loading Simulation ───
@@ -151,34 +141,56 @@ function setupEvents() {
 }
 
 function onCanvasClick(e) {
-  if (isZoomed) return;
-
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
   raycaster.setFromCamera(mouse, camera);
-  const meshes = getPlanetMeshes(world);
-  const intersects = raycaster.intersectObjects(meshes);
 
-  if (intersects.length > 0) {
-    const hit = intersects[0].object;
-    const planetId = hit.userData.planetId;
-    const planet = world.planets.find(p => p.config.id === planetId);
-    if (planet) selectPlanet(planet);
+  if (isZoomed && surface) {
+    const intersects = raycaster.intersectObjects(surface.children, true);
+    if (intersects.length > 0) {
+      handleNatureInteraction(intersects[0].object);
+    }
+    return;
+  }
+
+  if (!isZoomed) {
+    const meshes = getPlanetMeshes(world);
+    const intersects = raycaster.intersectObjects(meshes);
+
+    if (intersects.length > 0) {
+      const hit = intersects[0].object;
+      const planetId = hit.userData.planetId;
+      const planet = world.planets.find(p => p.config.id === planetId);
+      if (planet) selectPlanet(planet);
+    }
   }
 }
 
 function onCanvasHover(e) {
-  if (isZoomed) return;
-
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
   raycaster.setFromCamera(mouse, camera);
-  const meshes = getPlanetMeshes(world);
-  const intersects = raycaster.intersectObjects(meshes);
 
-  renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+  if (isZoomed && surface) {
+    const intersects = raycaster.intersectObjects(surface.children, true);
+    // Find if we're hovering a creature or tree
+    let isCreature = false;
+    if (intersects.length > 0) {
+      let obj = intersects[0].object;
+      while (obj && obj.parent) {
+        if (obj.userData.creature || obj.userData.isTree) { isCreature = true; break; }
+        obj = obj.parent;
+      }
+    }
+    renderer.domElement.style.cursor = isCreature ? 'pointer' : 'default';
+    return;
+  }
+
+  if (!isZoomed) {
+    const meshes = getPlanetMeshes(world);
+    const intersects = raycaster.intersectObjects(meshes);
+    renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+  }
 }
 
 function selectPlanet(planet) {
@@ -209,6 +221,9 @@ function selectPlanet(planet) {
 
     // Show section panel
     showSection(planet.config.id);
+
+    // Play sound for this environment
+    playSoundscape(planet.config.id);
   });
 }
 
@@ -223,6 +238,9 @@ function onBack() {
   hideSection();
   hideSurface();
   hideEnvironment();
+
+  // Return to space sound
+  playSoundscape('space');
 
   // Zoom out
   zoomOut(camera, () => {

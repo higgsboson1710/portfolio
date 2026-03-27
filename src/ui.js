@@ -105,14 +105,14 @@ const sectionGenerators = {
         <span class="link-icon">💼</span>
         <div>
           <span class="link-label">LINKEDIN</span><br/>
-          <span class="link-value">linkedin.com/in/abhinavsinghyadav17oct</span>
+          <span class="link-value">linkedin.com/in/higgsboson1710</span>
         </div>
       </a>
       <a class="contact-link" href="${CONTACT.github}" target="_blank">
         <span class="link-icon">🐙</span>
         <div>
           <span class="link-label">GITHUB</span><br/>
-          <span class="link-value">github.com/abhinavsinghyadav17oct</span>
+          <span class="link-value">github.com/higgsboson1710</span>
         </div>
       </a>
     </div>
@@ -276,7 +276,7 @@ function generateResponse(input) {
 
   // Resume / CV
   if (/resume|cv|download/.test(lower)) {
-    return "Want Abhinav's resume? Smart move 📄 You can reach out to him at abhinavsinghyadav17oct@gmail.com and he'll send it over. Or better yet, you're LOOKING at his interactive resume right now — just explore the planets! 🪐";
+    return "Want Abhinav's resume? Smart move 📄 You can reach out to him at higgsboson1710@gmail.com and he'll send it over. Or better yet, you're LOOKING at his interactive resume right now — just explore the planets! 🪐";
   }
 
   // Compliment

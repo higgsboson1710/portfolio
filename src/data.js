@@ -7,10 +7,10 @@ export const PROFILE = {
   tagline: 'CS Undergrad • Backend Engineer • Competitive Programmer',
   phone: '+91-9935914765',
   email: 'abhinavsinghyadav17oct@gmail.com',
-  linkedin: 'https://linkedin.com/in/abhinavsinghyadav17oct',
-  github: 'https://github.com/abhinavsinghyadav17oct',
-  leetcode: 'https://leetcode.com/abhinavsinghyadav17oct',
-  codechef: 'https://codechef.com/users/abhinavsinghyadav17oct',
+  linkedin: 'https://linkedin.com/in/higgsboson1710',
+  github: 'https://github.com/higgsboson1710',
+  leetcode: 'https://leetcode.com/higgsboson1710',
+  codechef: 'https://codechef.com/users/higgsboson1710',
 };
 
 export const ABOUT = {
@@ -123,8 +123,8 @@ export const COMPETITIVE = {
 export const CONTACT = {
   email: 'abhinavsinghyadav17oct@gmail.com',
   phone: '+91-9935914765',
-  linkedin: 'https://linkedin.com/in/abhinavsinghyadav17oct',
-  github: 'https://github.com/abhinavsinghyadav17oct',
+  linkedin: 'https://linkedin.com/in/higgsboson1710',
+  github: 'https://github.com/higgsboson1710',
   message: "Let's build something extraordinary together. Whether it's a collaboration, an opportunity, or just a conversation about algorithms — I'm always up for it.",
 };
 
