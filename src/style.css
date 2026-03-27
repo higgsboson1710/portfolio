@@ -16,6 +16,7 @@
   --font-body: 'Exo 2', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --z-loader: 10000;
+  --z-env: 5;
   --z-nav: 1000;
   --z-panel: 900;
   --z-chat: 950;
@@ -64,6 +65,74 @@ html, body {
   width: 100%;
   height: 100%;
   z-index: 1;
+}
+
+/* ─── Environment Background ─── */
+#env-bg {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-env);
+  transition: opacity 0.8s ease;
+}
+
+#env-bg.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#env-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.6) saturate(1.3);
+  animation: envZoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes envZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+.env-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 16, 0.5) 0%,
+    rgba(0, 0, 16, 0.2) 40%,
+    rgba(0, 0, 16, 0.6) 100%
+  );
+  pointer-events: none;
+}
+
+.env-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.env-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: rgba(0, 212, 255, 0.6);
+  border-radius: 50%;
+  animation: envFloat linear infinite;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+}
+
+@keyframes envFloat {
+  0% {
+    transform: translateY(100vh) translateX(0);
+    opacity: 0;
+  }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% {
+    transform: translateY(-10vh) translateX(30px);
+    opacity: 0;
+  }
 }
 
 /* ─── Loading Screen ─── */
@@ -140,8 +209,17 @@ html, body {
   color: var(--clr-text-dim);
   letter-spacing: 3px;
   text-transform: uppercase;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
   animation: pulse 1.5s ease infinite;
+}
+
+.loader-tagline {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--clr-accent);
+  letter-spacing: 2px;
+  margin-bottom: 2rem;
+  opacity: 0.6;
 }
 
 @keyframes pulse {
@@ -330,9 +408,9 @@ html, body {
   width: 480px;
   height: 100%;
   z-index: var(--z-panel);
-  background: linear-gradient(135deg, var(--clr-panel-bg), rgba(5, 10, 35, 0.92));
+  background: linear-gradient(135deg, rgba(5, 10, 30, 0.75), rgba(5, 10, 35, 0.85));
   border-left: 1px solid var(--clr-border);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(25px);
   overflow-y: auto;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
 }

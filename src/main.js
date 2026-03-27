@@ -20,6 +20,17 @@ let selectedPlanet = null;
 // Make THREE Vector3 globally available for ui.js label projection
 window.__THREE_VEC3__ = THREE.Vector3;
 
+// Environment image map
+const ENV_IMAGES = {
+  about: '/environments/about.png',
+  education: '/environments/education.png',
+  projects: '/environments/projects.png',
+  skills: '/environments/skills.png',
+  achievements: '/environments/achievements.png',
+  competitive: '/environments/competitive.png',
+  contact: '/environments/contact.png',
+};
+
 // ─── Init ───
 function init() {
   clock = new THREE.Clock();
@@ -185,6 +196,9 @@ function selectPlanet(planet) {
     const worldPos = getPlanetWorldPosition(planet);
     showSurface(worldPos, planet.config.colors);
 
+    // Show environment background
+    showEnvironment(planet.config.id);
+
     // Show section panel
     showSection(planet.config.id);
   });
@@ -193,9 +207,10 @@ function selectPlanet(planet) {
 function onBack() {
   if (!isZoomed) return;
 
-  // Hide section and surface
+  // Hide section, surface, and environment
   hideSection();
   hideSurface();
+  hideEnvironment();
 
   // Zoom out
   zoomOut(camera, () => {
@@ -208,6 +223,36 @@ function onBack() {
     // Show hint again
     document.getElementById('hint').classList.remove('hidden');
   });
+}
+
+// ─── Environment Background ───
+function showEnvironment(sectionId) {
+  const envBg = document.getElementById('env-bg');
+  const envImg = document.getElementById('env-bg-img');
+  const envParticles = document.getElementById('env-particles');
+
+  if (ENV_IMAGES[sectionId]) {
+    envImg.src = ENV_IMAGES[sectionId];
+    envBg.classList.remove('hidden');
+
+    // Spawn floating particles
+    envParticles.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+      const p = document.createElement('div');
+      p.className = 'env-particle';
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.animationDuration = `${5 + Math.random() * 10}s`;
+      p.style.animationDelay = `${Math.random() * 5}s`;
+      p.style.width = `${2 + Math.random() * 3}px`;
+      p.style.height = p.style.width;
+      envParticles.appendChild(p);
+    }
+  }
+}
+
+function hideEnvironment() {
+  const envBg = document.getElementById('env-bg');
+  envBg.classList.add('hidden');
 }
 
 // ─── Animation Loop ───

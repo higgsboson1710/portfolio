@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Abhinav Singh Yadav | HiggsBoson1710 Universe</title>
+  <title>Abhinav Singh Yadav | HiggsBosonVerse</title>
   <meta name="description" content="3D Space Portfolio of Abhinav Singh Yadav — CS Undergrad, Competitive Programmer, and Backend Engineer. Explore the HiggsBoson1710 Universe." />
   <meta name="keywords" content="Abhinav Singh Yadav, Portfolio, 3D, Three.js, Developer, Competitive Programmer, BIT Mesra" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,13 +19,21 @@
         <div class="ring ring-2"></div>
         <div class="ring ring-3"></div>
       </div>
-      <h1 class="loader-title">HIGGSBOSON<span class="accent">1710</span></h1>
-      <p class="loader-subtitle">Initializing Universe...</p>
+      <h1 class="loader-title">HIGGS<span class="accent">BOSON</span>VERSE</h1>
+      <p class="loader-subtitle">Entering the Multiverse...</p>
+      <p class="loader-tagline">Portfolio of Abhinav Singh Yadav</p>
       <div class="loader-bar">
         <div class="loader-progress" id="loader-progress"></div>
       </div>
       <p class="loader-percent" id="loader-percent">0%</p>
     </div>
+  </div>
+
+  <!-- Environment Background (shown when zoomed into planet) -->
+  <div id="env-bg" class="hidden">
+    <img id="env-bg-img" src="" alt="" />
+    <div class="env-overlay"></div>
+    <div class="env-particles" id="env-particles"></div>
   </div>
 
   <!-- 3D Canvas Container -->
