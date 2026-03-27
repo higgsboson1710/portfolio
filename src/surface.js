@@ -31,6 +31,7 @@ let waterMesh = null;
 let waterUniforms = null;
 let isVisible = false;
 const envCache = {};
+let creatures = []; // animated nature objects
 
 // ─── Environment definitions per section ───
 const ENV_BUILDERS = {
@@ -126,6 +127,11 @@ function buildCityEnvironment() {
   const dirLight = new THREE.DirectionalLight(0x4488cc, 0.6);
   dirLight.position.set(20, 30, 10);
   group.add(dirLight);
+
+  // Nature: fireflies between buildings
+  addFireflies(group, 30, 15, 0x44ffaa);
+  // Nature: birds flying over city
+  addBirdFlock(group, 5, 18, 25);
 
   return group;
 }
@@ -275,6 +281,12 @@ function buildMountainCampus() {
   // Water
   addWater(group, 0, -1.5, 0, 20, 20);
 
+  // Nature: birds, butterflies, falling leaves
+  addBirdFlock(group, 8, 12, 20);
+  addButterflies(group, 12, 4);
+  addFallingLeaves(group, 40, 20, 0x885522);
+  addClouds(group, 6, 20);
+
   // Lighting
   group.add(new THREE.AmbientLight(0x88aacc, 0.5));
   const sun = new THREE.DirectionalLight(0xffeedd, 1.0);
@@ -380,6 +392,9 @@ function buildTechLab() {
     group.add(pl);
   });
 
+  // Nature: fireflies in the lab
+  addFireflies(group, 20, 5, 0x00ff88);
+
   return group;
 }
 
@@ -449,6 +464,9 @@ function buildDigitalWorld() {
   const pl2 = new THREE.PointLight(0x8800ff, 1.5, 25);
   pl2.position.set(10, 5, -10);
   group.add(pl2);
+
+  // Nature: glowing spores floating
+  addFireflies(group, 40, 12, 0xff00ff);
 
   return group;
 }
@@ -523,6 +541,10 @@ function buildArena() {
   const warmLight = new THREE.DirectionalLight(0xffcc66, 0.8);
   warmLight.position.set(10, 20, 10);
   group.add(warmLight);
+
+  // Nature: butterflies and golden petals
+  addButterflies(group, 8, 6);
+  addFallingLeaves(group, 30, 12, 0xffcc33);
 
   return group;
 }
@@ -624,6 +646,9 @@ function buildDigitalArena() {
   spot.position.set(5, 8, -5);
   group.add(spot);
 
+  // Nature: fire embers rising
+  addFireflies(group, 30, 10, 0xff3366);
+
   return group;
 }
 
@@ -649,6 +674,13 @@ function buildMountainLake() {
 
   // Water lake
   addWater(group, 0, -0.3, 0, 25, 25);
+
+  // Nature: full ecosystem
+  addBirdFlock(group, 10, 14, 25);
+  addButterflies(group, 15, 3);
+  addFallingLeaves(group, 50, 18, 0xff8866);
+  addClouds(group, 8, 25);
+  addFireflies(group, 25, 5, 0x88ffaa);
 
   // Lighting — warm sunset
   group.add(new THREE.AmbientLight(0x667788, 0.4));
@@ -738,6 +770,113 @@ function createTree() {
   const scale = 0.8 + Math.random() * 0.8;
   tree.scale.set(scale, scale, scale);
   return tree;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NATURE CREATURES & PARTICLES
+// ═══════════════════════════════════════════════════════════════
+
+function addBirdFlock(group, count, height, spread) {
+  for (let i = 0; i < count; i++) {
+    const bird = new THREE.Group();
+    // Body
+    const bodyGeo = new THREE.ConeGeometry(0.1, 0.4, 4);
+    bodyGeo.rotateX(-Math.PI / 2);
+    const bodyMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+    bird.add(new THREE.Mesh(bodyGeo, bodyMat));
+    // Wings
+    const wingGeo = new THREE.PlaneGeometry(0.5, 0.15);
+    const wingMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+    const wingL = new THREE.Mesh(wingGeo, wingMat);
+    wingL.position.set(-0.25, 0, 0);
+    bird.add(wingL);
+    const wingR = new THREE.Mesh(wingGeo.clone(), wingMat);
+    wingR.position.set(0.25, 0, 0);
+    bird.add(wingR);
+    bird.position.set((Math.random()-0.5)*spread, height + Math.random()*4, (Math.random()-0.5)*spread);
+    bird.userData.creature = 'bird';
+    bird.userData.speed = 0.02 + Math.random()*0.03;
+    bird.userData.radius = 8 + Math.random()*12;
+    bird.userData.angle = Math.random()*Math.PI*2;
+    bird.userData.baseY = bird.position.y;
+    bird.userData.wingL = wingL;
+    bird.userData.wingR = wingR;
+    group.add(bird);
+  }
+}
+
+function addButterflies(group, count, maxH) {
+  const colors = [0xff6699, 0xffaa33, 0x66ccff, 0xaa66ff, 0xff3366, 0x33ff99];
+  for (let i = 0; i < count; i++) {
+    const bf = new THREE.Group();
+    const c = colors[Math.floor(Math.random()*colors.length)];
+    const wGeo = new THREE.PlaneGeometry(0.2, 0.15);
+    const wMat = new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    const wL = new THREE.Mesh(wGeo, wMat); wL.position.x = -0.1;
+    const wR = new THREE.Mesh(wGeo.clone(), wMat); wR.position.x = 0.1;
+    bf.add(wL); bf.add(wR);
+    bf.position.set((Math.random()-0.5)*15, 1+Math.random()*maxH, (Math.random()-0.5)*15);
+    bf.userData.creature = 'butterfly';
+    bf.userData.wingL = wL; bf.userData.wingR = wR;
+    bf.userData.speed = 0.5 + Math.random()*1.5;
+    bf.userData.wobble = Math.random()*10;
+    bf.userData.basePos = bf.position.clone();
+    group.add(bf);
+  }
+}
+
+function addFireflies(group, count, maxH, color) {
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(0.05, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 });
+    const ff = new THREE.Mesh(geo, mat);
+    ff.position.set((Math.random()-0.5)*30, Math.random()*maxH, (Math.random()-0.5)*30);
+    ff.userData.creature = 'firefly';
+    ff.userData.basePos = ff.position.clone();
+    ff.userData.phase = Math.random()*Math.PI*2;
+    ff.userData.speed = 0.3+Math.random()*0.7;
+    group.add(ff);
+  }
+}
+
+function addFallingLeaves(group, count, height, color) {
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.PlaneGeometry(0.12, 0.08);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color).offsetHSL(Math.random()*0.1-0.05, 0, Math.random()*0.2-0.1),
+      side: THREE.DoubleSide, transparent: true, opacity: 0.85,
+    });
+    const leaf = new THREE.Mesh(geo, mat);
+    leaf.position.set((Math.random()-0.5)*30, Math.random()*height, (Math.random()-0.5)*30);
+    leaf.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+    leaf.userData.creature = 'leaf';
+    leaf.userData.fallSpeed = 0.005+Math.random()*0.015;
+    leaf.userData.swaySpeed = 1+Math.random()*2;
+    leaf.userData.swayAmp = 0.02+Math.random()*0.04;
+    leaf.userData.maxY = height;
+    group.add(leaf);
+  }
+}
+
+function addClouds(group, count, spread) {
+  for (let i = 0; i < count; i++) {
+    const cloud = new THREE.Group();
+    const puffs = 3+Math.floor(Math.random()*4);
+    for (let j = 0; j < puffs; j++) {
+      const s = 1.5+Math.random()*2.5;
+      const geo = new THREE.SphereGeometry(s, 8, 8);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+      const puff = new THREE.Mesh(geo, mat);
+      puff.position.set((Math.random()-0.5)*3, (Math.random()-0.5)*0.8, (Math.random()-0.5)*3);
+      puff.scale.y = 0.4;
+      cloud.add(puff);
+    }
+    cloud.position.set((Math.random()-0.5)*spread*2, 15+Math.random()*10, (Math.random()-0.5)*spread*2);
+    cloud.userData.creature = 'cloud';
+    cloud.userData.speed = 0.005+Math.random()*0.01;
+    cloud.userData.drift = Math.random() > 0.5 ? 1 : -1;
+    group.add(cloud);
+  }
 }
 
 // Water shader
@@ -841,16 +980,70 @@ export function hideSurface() {
 
 export function updateSurface(time) {
   if (!isVisible || !activeGroup) return;
+  const t = time * 0.001;
 
   if (waterUniforms) {
-    waterUniforms.uTime.value = time * 0.001;
+    waterUniforms.uTime.value = t;
   }
 
-  // Spin any objects with spin flag
+  // Animate all objects
   activeGroup.traverse(obj => {
     if (obj.userData.spin) {
       obj.rotation.y += 0.005;
       obj.rotation.x += 0.002;
+    }
+    const c = obj.userData.creature;
+    if (c === 'bird') {
+      obj.userData.angle += obj.userData.speed;
+      const a = obj.userData.angle;
+      const r = obj.userData.radius;
+      obj.position.x = Math.cos(a) * r;
+      obj.position.z = Math.sin(a) * r;
+      obj.position.y = obj.userData.baseY + Math.sin(t * 0.5 + a) * 1.5;
+      obj.rotation.y = -a + Math.PI / 2;
+      // Wing flap
+      const flap = Math.sin(t * 8) * 0.5;
+      if (obj.userData.wingL) obj.userData.wingL.rotation.z = flap;
+      if (obj.userData.wingR) obj.userData.wingR.rotation.z = -flap;
+    }
+    if (c === 'butterfly') {
+      const bp = obj.userData.basePos;
+      const w = obj.userData.wobble;
+      obj.position.x = bp.x + Math.sin(t * obj.userData.speed + w) * 3;
+      obj.position.z = bp.z + Math.cos(t * obj.userData.speed * 0.7 + w) * 3;
+      obj.position.y = bp.y + Math.sin(t * 1.5 + w) * 0.8;
+      // Wing flap — fast
+      const flap = Math.sin(t * 12 + w) * 0.7;
+      if (obj.userData.wingL) obj.userData.wingL.rotation.z = flap;
+      if (obj.userData.wingR) obj.userData.wingR.rotation.z = -flap;
+    }
+    if (c === 'firefly') {
+      const bp = obj.userData.basePos;
+      const p = obj.userData.phase;
+      const s = obj.userData.speed;
+      obj.position.x = bp.x + Math.sin(t * s + p) * 2;
+      obj.position.y = bp.y + Math.sin(t * s * 0.8 + p * 2) * 1.5;
+      obj.position.z = bp.z + Math.cos(t * s * 0.6 + p) * 2;
+      // Pulse glow
+      obj.material.opacity = 0.3 + Math.sin(t * 3 + p) * 0.5;
+      const sc = 0.8 + Math.sin(t * 3 + p) * 0.4;
+      obj.scale.set(sc, sc, sc);
+    }
+    if (c === 'leaf') {
+      obj.position.y -= obj.userData.fallSpeed;
+      obj.position.x += Math.sin(t * obj.userData.swaySpeed) * obj.userData.swayAmp;
+      obj.rotation.x += 0.01;
+      obj.rotation.z += 0.008;
+      // Reset when fallen
+      if (obj.position.y < -1) {
+        obj.position.y = obj.userData.maxY;
+        obj.position.x = (Math.random()-0.5)*30;
+        obj.position.z = (Math.random()-0.5)*30;
+      }
+    }
+    if (c === 'cloud') {
+      obj.position.x += obj.userData.speed * obj.userData.drift;
+      if (Math.abs(obj.position.x) > 40) obj.userData.drift *= -1;
     }
   });
 }
