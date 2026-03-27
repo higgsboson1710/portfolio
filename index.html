@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abhinav Singh Yadav | HiggsBoson1710 Universe</title>
+  <meta name="description" content="3D Space Portfolio of Abhinav Singh Yadav — CS Undergrad, Competitive Programmer, and Backend Engineer. Explore the HiggsBoson1710 Universe." />
+  <meta name="keywords" content="Abhinav Singh Yadav, Portfolio, 3D, Three.js, Developer, Competitive Programmer, BIT Mesra" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loader">
+    <div class="loader-content">
+      <div class="loader-rings">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+      </div>
+      <h1 class="loader-title">HIGGSBOSON<span class="accent">1710</span></h1>
+      <p class="loader-subtitle">Initializing Universe...</p>
+      <div class="loader-bar">
+        <div class="loader-progress" id="loader-progress"></div>
+      </div>
+      <p class="loader-percent" id="loader-percent">0%</p>
+    </div>
+  </div>
+
+  <!-- 3D Canvas Container -->
+  <canvas id="universe-canvas"></canvas>
+
+  <!-- Top Navigation Bar -->
+  <nav id="top-nav" class="hidden">
+    <div class="nav-left">
+      <span class="nav-logo">HB<span class="accent">1710</span></span>
+    </div>
+    <div class="nav-center" id="planet-name-display"></div>
+    <div class="nav-right">
+      <button class="nav-btn" id="btn-sound" title="Toggle Sound">🔊</button>
+      <button class="nav-btn" id="btn-chat" title="Open Chat">💬</button>
+    </div>
+  </nav>
+
+  <!-- Back Button (when zoomed into planet) -->
+  <button id="btn-back" class="hidden">
+    <span class="back-arrow">←</span>
+    <span class="back-text">Return to Orbit</span>
+  </button>
+
+  <!-- Planet Labels (positioned via JS) -->
+  <div id="planet-labels"></div>
+
+  <!-- Section Panel (opens when planet is selected) -->
+  <div id="section-panel" class="hidden">
+    <div class="section-panel-inner">
+      <div class="section-header">
+        <h2 class="section-title" id="section-title"></h2>
+        <div class="section-line"></div>
+      </div>
+      <div class="section-content" id="section-content"></div>
+    </div>
+  </div>
+
+  <!-- Chatbot -->
+  <div id="chatbot" class="hidden">
+    <div class="chat-header">
+      <div class="chat-avatar">🤖</div>
+      <div class="chat-info">
+        <span class="chat-name">HB-1710 AI</span>
+        <span class="chat-status">Online • Ready to chat</span>
+      </div>
+      <button class="chat-close" id="chat-close">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg bot">
+        <div class="msg-bubble">Yo! Welcome to the HiggsBoson1710 Universe 🌌 I'm Abhinav's AI assistant. Ask me anything about him — his skills, projects, achievements, you name it. Let's go! 🚀</div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Ask me anything..." autocomplete="off" />
+      <button id="chat-send">➤</button>
+    </div>
+  </div>
+
+  <!-- Instruction Hint -->
+  <div id="hint" class="hidden">
+    <p>🖱️ Click on a planet to explore • Scroll to zoom • Drag to rotate</p>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
