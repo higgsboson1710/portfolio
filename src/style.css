@@ -16,7 +16,8 @@
   --font-body: 'Exo 2', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --z-loader: 10000;
-  --z-env: 5;
+  --z-env: 2;
+  --z-canvas: 3;
   --z-nav: 1000;
   --z-panel: 900;
   --z-chat: 950;
@@ -64,7 +65,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 1;
+  z-index: var(--z-canvas);
 }
 
 /* ─── Environment Background ─── */

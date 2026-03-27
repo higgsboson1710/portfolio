@@ -37,6 +37,7 @@ function init() {
 
   // Scene
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000010);
   scene.fog = new THREE.FogExp2(0x000010, 0.0015);
 
   // Camera
@@ -52,7 +53,7 @@ function init() {
   renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
-    alpha: false,
+    alpha: true,
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -192,9 +193,16 @@ function selectPlanet(planet) {
 
   // Zoom camera to planet
   zoomToPlanet(camera, planet, () => {
-    // Show surface (water + city)
+    // Make canvas transparent so env image shows through
+    scene.background = null;
+    scene.fog = null;
+
+    // Show surface (3D environment)
     const worldPos = getPlanetWorldPosition(planet);
-    showSurface(worldPos, planet.config.colors);
+    const surfaceGroup = showSurface(worldPos, planet.config.colors, planet.config.id);
+    if (surfaceGroup && !surfaceGroup.parent) {
+      scene.add(surfaceGroup);
+    }
 
     // Show environment background
     showEnvironment(planet.config.id);
@@ -206,6 +214,10 @@ function selectPlanet(planet) {
 
 function onBack() {
   if (!isZoomed) return;
+
+  // Restore scene background for space view
+  scene.background = new THREE.Color(0x000010);
+  scene.fog = new THREE.FogExp2(0x000010, 0.0015);
 
   // Hide section, surface, and environment
   hideSection();
