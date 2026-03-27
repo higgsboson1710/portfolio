@@ -174,49 +174,7 @@ export function createPlanetLabels(planetConfigs) {
   return labels;
 }
 
-export function updatePlanetLabels(labels, planets, camera, renderer) {
-  const canvas = renderer.domElement;
-  const widthHalf = canvas.clientWidth / 2;
-  const heightHalf = canvas.clientHeight / 2;
-  const tempVec = new (window.THREE || { Vector3: class {} }).Vector3?.() || null;
-
-  labels.forEach((label, i) => {
-    if (!planets[i]) return;
-    const planet = planets[i];
-
-    // Get world position
-    const pos = new window.__THREE_VEC3__();
-    planet.mesh.getWorldPosition(pos);
-
-    // Offset label above planet
-    pos.y += planet.config.planetRadius + 1.5;
-
-    // Project to screen
-    pos.project(camera);
-
-    // Check if in front of camera
-    if (pos.z > 1) {
-      label.el.style.display = 'none';
-      return;
-    }
-
-    const x = (pos.x * widthHalf) + widthHalf;
-    const y = -(pos.y * heightHalf) + heightHalf;
-
-    label.el.style.display = 'block';
-    label.el.style.left = `${x}px`;
-    label.el.style.top = `${y}px`;
-
-    // Fade based on distance
-    const dist = camera.position.distanceTo(new window.__THREE_VEC3__(
-      planet.group.position.x,
-      planet.group.position.y,
-      planet.group.position.z
-    ));
-    const opacity = Math.max(0, Math.min(1, 1 - (dist - 30) / 200));
-    label.el.style.opacity = dist < 200 ? opacity : 0;
-  });
-}
+// Note: Planet label updates are handled directly in main.js
 
 // ─── Chatbot ───
 export function initChatbot() {

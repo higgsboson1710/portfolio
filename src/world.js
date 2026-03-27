@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { PLANET_CONFIG } from './data.js';
 
 // ─── Noise helper for procedural textures ───
-function hash(n) { return Math.sin(n) * 43758.5453123 % 1; }
+function hash(n) { const s = Math.sin(n) * 43758.5453123; return s - Math.floor(s); }
 function noise2D(x, y) {
   const ix = Math.floor(x), iy = Math.floor(y);
   const fx = x - ix, fy = y - iy;
@@ -131,23 +131,26 @@ function createSun(scene) {
     group.add(new THREE.Mesh(glowGeo, glowMat));
   }
 
-  // Sun corona sprite
-  const spriteMat = new THREE.SpriteMaterial({
-    color: 0xffaa33,
-    transparent: true,
-    opacity: 0.3,
-    blending: THREE.AdditiveBlending,
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(25, 25, 1);
-  group.add(sprite);
+  // Sun corona — additional glow layers (no sprite to avoid square artifacts)
+  for (let j = 0; j < 4; j++) {
+    const coronaGeo = new THREE.SphereGeometry(9 + j * 3, 24, 24);
+    const coronaMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(1, 0.5 - j * 0.08, 0.05),
+      transparent: true,
+      opacity: 0.035 - j * 0.007,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    group.add(new THREE.Mesh(coronaGeo, coronaMat));
+  }
 
   // Point light
-  const light = new THREE.PointLight(0xffcc66, 2.5, 300);
+  const light = new THREE.PointLight(0xffcc66, 3.0, 500);
   group.add(light);
 
-  // Ambient light
-  scene.add(new THREE.AmbientLight(0x334466, 0.4));
+  // Ambient light — higher intensity so planets are visible
+  scene.add(new THREE.AmbientLight(0x556688, 0.8));
 
   scene.add(group);
   return { group, mesh };
