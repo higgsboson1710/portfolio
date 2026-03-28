@@ -15,8 +15,9 @@ const ENVS_TO_SOUNDS = {
 
 let audioContext = null;
 let masterGain = null;
-let isMuted = true;
+let isMuted = false; // Start unmuted, but wait for first user interaction to actually play
 let activeSoundKey = 'space';
+let audioUnlocked = false;
 let activeNodes = [];
 
 // ── Noise Buffers ───────────────────────────────────────────
@@ -715,6 +716,36 @@ function startSoundscape(key) {
 export function initAudio() {
   const btn = document.getElementById('btn-sound');
   if (btn) btn.addEventListener('click', toggleMute);
+
+  // Mobile/Browser Auto-play Policy Unlocker
+  const unlockAudio = () => {
+    if (audioUnlocked) return;
+    
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioContext.createGain();
+      const volInput = document.getElementById('volume-slider');
+      masterGain.gain.setValueAtTime(volInput ? parseFloat(volInput.value) : 0.75, audioContext.currentTime);
+      masterGain.connect(audioContext.destination);
+    }
+    
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    audioUnlocked = true;
+    
+    // If we're supposedly not muted, but nodes aren't playing, start them now
+    if (!isMuted && activeNodes.length === 0) {
+      startSoundscape(activeSoundKey);
+    }
+
+    document.removeEventListener('touchstart', unlockAudio);
+    document.removeEventListener('click', unlockAudio);
+  };
+
+  document.addEventListener('touchstart', unlockAudio, { once: true });
+  document.addEventListener('click', unlockAudio, { once: true });
 }
 
 export async function playSoundscape(key) {
