@@ -21,6 +21,19 @@ let planetLabels = [];
 let isZoomed = false;
 let selectedPlanet = null;
 
+// Achievement Tracking
+const visitedPlanets = new Set();
+const ACHIEVEMENTS = {
+  about: { title: "First Contact", icon: "👽" },
+  education: { title: "Academic Records Accessed", icon: "📚" },
+  projects: { title: "Lab Clearance Granted", icon: "💻" },
+  skills: { title: "Skill Tree Unlocked", icon: "⚡" },
+  achievements: { title: "Hall of Fame Discovered", icon: "🏅" },
+  competitive: { title: "Rankings Initialized", icon: "⚔️" },
+  contact: { title: "Comms Array Online", icon: "📡" },
+};
+let achievementTimeout = null;
+
 // Make THREE Vector3 globally available for ui.js label projection
 window.__THREE_VEC3__ = THREE.Vector3;
 
@@ -342,6 +355,12 @@ function selectPlanet(planet) {
   document.getElementById('hint').classList.add('hidden');
   document.getElementById('planet-labels').style.display = 'none';
 
+  // Check for achievement
+  if (!visitedPlanets.has(planet.config.id)) {
+    visitedPlanets.add(planet.config.id);
+    showAchievement(planet.config.id);
+  }
+
   zoomToPlanet(camera, planet, () => {
     scene.background = null;
     scene.fog = null;
@@ -376,6 +395,39 @@ function onBack() {
     document.getElementById('planet-labels').style.display = 'block';
     document.getElementById('hint').classList.remove('hidden');
   });
+}
+
+function showAchievement(planetId) {
+  const data = ACHIEVEMENTS[planetId];
+  if (!data) return;
+  
+  const toast = document.getElementById('achievement-toast');
+  const desc = document.getElementById('achieve-desc');
+  const icon = toast.querySelector('.achieve-icon');
+  
+  if (!toast || !desc || !icon) return;
+
+  desc.textContent = data.title;
+  icon.textContent = data.icon;
+  
+  // Clear any existing timeout
+  if (achievementTimeout) clearTimeout(achievementTimeout);
+  
+  // Show toast
+  toast.classList.remove('hidden');
+  
+  // Need a small delay to allow display to apply before adding visible class for transition
+  setTimeout(() => {
+    toast.classList.add('visible');
+  }, 50);
+  
+  // Hide after 4 seconds
+  achievementTimeout = setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 600); // Wait for transition to finish
+  }, 4000);
 }
 
 // ─── Theme Toggle ───
