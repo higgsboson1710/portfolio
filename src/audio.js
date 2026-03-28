@@ -755,3 +755,10 @@ export function toggleMute() {
     startSoundscape(activeSoundKey);
   }
 }
+
+export function setVolume(value) {
+  if (!masterGain) return;
+  const v = Math.max(0, Math.min(1, value));
+  masterGain.gain.setValueAtTime(v, audioContext.currentTime);
+}
+

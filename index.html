@@ -51,7 +51,11 @@
   <div class="speed-lines" id="speed-lines"></div>
   <div class="entry-flash" id="entry-flash"></div>
     <div class="nav-right">
-      <button class="nav-btn" id="btn-sound" title="Toggle Sound">🔊</button>
+      <div class="volume-control" id="volume-control">
+        <button class="nav-btn" id="btn-sound" title="Toggle Sound">🔊</button>
+        <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="0.75" title="Volume" />
+      </div>
+      <button class="nav-btn" id="btn-theme" title="Toggle Theme">🌙</button>
       <button class="nav-btn" id="btn-chat" title="Open Chat">💬</button>
     </div>
   </nav>
@@ -99,7 +103,7 @@
 
   <!-- Instruction Hint -->
   <div id="hint" class="hidden">
-    <p>🖱️ Click on a planet to explore • Scroll to zoom • Drag to rotate</p>
+    <p>🖱️ Click a planet to explore • Scroll to zoom • Drag to rotate • Keys 1-7 to jump • Esc to return</p>
   </div>
 
   <script type="module" src="/src/main.js"></script>

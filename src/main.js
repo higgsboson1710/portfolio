@@ -2,16 +2,19 @@
 // Main — HiggsBoson1710 Universe Entry Point
 // ═══════════════════════════════════════════════════════════════
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import './style.css';
 import { PLANET_CONFIG, PROFILE } from './data.js';
-import { createWorld, updateWorld, getPlanetMeshes, getPlanetWorldPosition } from './world.js';
+import { createWorld, updateWorld, getPlanetMeshes, getPlanetWorldPosition, setHoveredPlanet, triggerParticleBurst } from './world.js';
 import { initCamera, updateCamera, zoomToPlanet, zoomOut, playIntro } from './camera.js';
 import { createSurface, showSurface, hideSurface, updateSurface, handleNatureInteraction } from './surface.js';
 import { showSection, hideSection, createPlanetLabels, initChatbot } from './ui.js';
-import { initAudio, playSoundscape } from './audio.js';
+import { initAudio, playSoundscape, setVolume } from './audio.js';
 
 // ─── Globals ───
-let scene, camera, renderer, clock;
+let scene, camera, renderer, clock, composer;
 let world, surface;
 let raycaster, mouse;
 let planetLabels = [];
@@ -26,11 +29,15 @@ const ENV_IMAGES = {
   about: '/environments/about.png',
   education: '/environments/education.png',
   projects: '/environments/projects.png',
-  skills: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=2073', // Tropical Beach
+  skills: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=2073',
   achievements: '/environments/achievements.png',
   competitive: '/environments/competitive.png',
   contact: '/environments/contact.png',
 };
+
+// Konami Code
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+let konamiIndex = 0;
 
 // ─── Init ───
 function init() {
@@ -53,6 +60,21 @@ function init() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Post-processing — Bloom
+    composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.8,   // strength
+      0.4,   // radius
+      0.85   // threshold
+    );
+    composer.addPass(bloomPass);
 
     // Raycaster
     raycaster = new THREE.Raycaster();
@@ -69,7 +91,7 @@ function init() {
         setupEvents();
         hideLoader();
         initAudio();
-        
+
         playIntro(camera, () => {
           document.getElementById('hint').classList.remove('hidden');
         });
@@ -119,6 +141,7 @@ function setupEvents() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
   });
 
   // Click on planet
@@ -126,6 +149,10 @@ function setupEvents() {
 
   // Hover cursor
   renderer.domElement.addEventListener('mousemove', onCanvasHover);
+
+  // Touch events for mobile
+  renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+  renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
 
   // Back button
   document.getElementById('btn-back').addEventListener('click', onBack);
@@ -138,11 +165,112 @@ function setupEvents() {
     const planet = world.planets.find(p => p.config.id === planetId);
     if (planet) selectPlanet(planet);
   });
+
+  // ─── Keyboard Navigation ───
+  window.addEventListener('keydown', onKeyDown);
+
+  // ─── Volume Slider ───
+  const volumeSlider = document.getElementById('volume-slider');
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+      setVolume(parseFloat(e.target.value));
+    });
+  }
+
+  // ─── Theme Toggle ───
+  const themeBtn = document.getElementById('btn-theme');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', toggleTheme);
+  }
+}
+
+function onKeyDown(e) {
+  // Konami Code detection
+  if (e.code === KONAMI[konamiIndex]) {
+    konamiIndex++;
+    if (konamiIndex === KONAMI.length) {
+      konamiIndex = 0;
+      triggerKonamiEasterEgg();
+    }
+  } else {
+    konamiIndex = 0;
+  }
+
+  // Number keys 1-7 to jump to planets
+  if (!isZoomed) {
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 7 && world) {
+      const planet = world.planets[num - 1];
+      if (planet) selectPlanet(planet);
+    }
+  }
+
+  // Escape to go back
+  if (e.key === 'Escape' && isZoomed) {
+    onBack();
+  }
+}
+
+function triggerKonamiEasterEgg() {
+  // Warp speed effect!
+  const flash = document.getElementById('entry-flash');
+  const speedLines = document.getElementById('speed-lines');
+
+  flash.style.background = 'linear-gradient(45deg, #00d4ff, #ff00ff, #ffcc00)';
+  flash.style.opacity = '0.6';
+  speedLines.style.opacity = '1';
+
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    speedLines.style.opacity = '0';
+    flash.style.background = 'white';
+  }, 1500);
+
+  // Spawn a burst of particles at center
+  if (world && world.particleBurst) {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        triggerParticleBurst(world.particleBurst, new THREE.Vector3(
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 20
+        ));
+      }, i * 100);
+    }
+  }
+}
+
+// ─── Touch Events for Mobile ───
+let touchStartPos = null;
+let touchStartTime = 0;
+
+function onTouchStart(e) {
+  if (e.touches.length === 1) {
+    touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    touchStartTime = Date.now();
+  }
+}
+
+function onTouchEnd(e) {
+  if (!touchStartPos) return;
+  const dt = Date.now() - touchStartTime;
+  // Treat as tap if short time and small movement
+  if (dt < 300) {
+    const fakeEvent = {
+      clientX: touchStartPos.x,
+      clientY: touchStartPos.y,
+    };
+    onCanvasClick(fakeEvent);
+  }
+  touchStartPos = null;
 }
 
 function onCanvasClick(e) {
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
   if (isZoomed && surface) {
@@ -162,6 +290,12 @@ function onCanvasClick(e) {
       const planetId = hit.userData.planetId;
       const planet = world.planets.find(p => p.config.id === planetId);
       if (planet) selectPlanet(planet);
+    } else if (world && world.particleBurst) {
+      // Click on empty space → particle burst at a point in 3D space
+      const dir = raycaster.ray.direction.clone();
+      const origin = raycaster.ray.origin.clone();
+      const point = origin.add(dir.multiplyScalar(50 + Math.random() * 50));
+      triggerParticleBurst(world.particleBurst, point);
     }
   }
 }
@@ -173,7 +307,6 @@ function onCanvasHover(e) {
 
   if (isZoomed && surface) {
     const intersects = raycaster.intersectObjects(surface.children, true);
-    // Find if we're hovering a creature or tree
     let isCreature = false;
     if (intersects.length > 0) {
       let obj = intersects[0].object;
@@ -186,10 +319,19 @@ function onCanvasHover(e) {
     return;
   }
 
-  if (!isZoomed) {
+  if (!isZoomed && world) {
     const meshes = getPlanetMeshes(world);
     const intersects = raycaster.intersectObjects(meshes);
-    renderer.domElement.style.cursor = intersects.length > 0 ? 'pointer' : 'default';
+
+    if (intersects.length > 0) {
+      renderer.domElement.style.cursor = 'pointer';
+      const planetId = intersects[0].object.userData.planetId;
+      const planet = world.planets.find(p => p.config.id === planetId);
+      setHoveredPlanet(world, planet || null);
+    } else {
+      renderer.domElement.style.cursor = 'default';
+      setHoveredPlanet(world, null);
+    }
   }
 }
 
@@ -197,32 +339,21 @@ function selectPlanet(planet) {
   isZoomed = true;
   selectedPlanet = planet;
 
-  // Hide hint
   document.getElementById('hint').classList.add('hidden');
-
-  // Hide planet labels
   document.getElementById('planet-labels').style.display = 'none';
 
-  // Zoom camera to planet
   zoomToPlanet(camera, planet, () => {
-    // Make canvas transparent so env image shows through
     scene.background = null;
     scene.fog = null;
 
-    // Show surface (3D environment)
     const worldPos = getPlanetWorldPosition(planet);
     const surfaceGroup = showSurface(worldPos, planet.config.colors, planet.config.id);
     if (surfaceGroup && !surfaceGroup.parent) {
       scene.add(surfaceGroup);
     }
 
-    // Show environment background
     showEnvironment(planet.config.id);
-
-    // Show section panel
     showSection(planet.config.id);
-
-    // Play sound for this environment
     playSoundscape(planet.config.id);
   });
 }
@@ -230,29 +361,44 @@ function selectPlanet(planet) {
 function onBack() {
   if (!isZoomed) return;
 
-  // Restore scene background for space view
   scene.background = new THREE.Color(0x000010);
   scene.fog = new THREE.FogExp2(0x000010, 0.0015);
 
-  // Hide section, surface, and environment
   hideSection();
   hideSurface();
   hideEnvironment();
 
-  // Return to space sound
   playSoundscape('space');
 
-  // Zoom out
   zoomOut(camera, () => {
     isZoomed = false;
     selectedPlanet = null;
-
-    // Show planet labels again
     document.getElementById('planet-labels').style.display = 'block';
-
-    // Show hint again
     document.getElementById('hint').classList.remove('hidden');
   });
+}
+
+// ─── Theme Toggle ───
+let currentTheme = 'dark';
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'nebula' : 'dark';
+  document.body.dataset.theme = currentTheme;
+
+  const btn = document.getElementById('btn-theme');
+  if (btn) {
+    btn.textContent = currentTheme === 'dark' ? '🌙' : '☀️';
+  }
+
+  if (!isZoomed) {
+    if (currentTheme === 'nebula') {
+      scene.background = new THREE.Color(0x0a0520);
+      scene.fog = new THREE.FogExp2(0x0a0520, 0.001);
+    } else {
+      scene.background = new THREE.Color(0x000010);
+      scene.fog = new THREE.FogExp2(0x000010, 0.0015);
+    }
+  }
 }
 
 // ─── Environment Background ───
@@ -265,7 +411,6 @@ function showEnvironment(sectionId) {
     envImg.src = ENV_IMAGES[sectionId];
     envBg.classList.remove('hidden');
 
-    // Spawn floating particles
     envParticles.innerHTML = '';
     for (let i = 0; i < 25; i++) {
       const p = document.createElement('div');
@@ -290,20 +435,13 @@ function animate() {
   requestAnimationFrame(animate);
   const time = clock.getElapsedTime() * 1000;
 
-  // Update world (orbits, rotations)
   updateWorld(world, time);
-
-  // Update camera controls
   updateCamera();
-
-  // Update surface (water waves)
   updateSurface(time);
-
-  // Update planet labels
   updatePlanetLabelPositions(time);
 
-  // Render
-  renderer.render(scene, camera);
+  // Render with post-processing (bloom)
+  composer.render();
 }
 
 function updatePlanetLabelPositions(time) {
@@ -333,7 +471,6 @@ function updatePlanetLabelPositions(time) {
     label.el.style.left = `${x}px`;
     label.el.style.top = `${y}px`;
 
-    // Fade based on distance
     const camPos = camera.position;
     const planetWorldPos = new THREE.Vector3();
     planet.mesh.getWorldPosition(planetWorldPos);

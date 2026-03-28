@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 3D World — Planets, Sun, Stars, Asteroids, Nebula
+// 3D World — Planets, Sun, Stars, Asteroids, Nebula, Comets
 // ═══════════════════════════════════════════════════════════════
 import * as THREE from 'three';
 import { PLANET_CONFIG } from './data.js';
@@ -59,8 +59,6 @@ function generatePlanetTexture(colors, size = 512) {
       const ny = y / size * 6;
       let n = fbm(nx + 1.7, ny + 3.2, 6);
       n = Math.max(0, Math.min(1, n * 1.2));
-
-      // Add horizontal bands for gas-giant look
       const band = Math.sin(y / size * Math.PI * 8 + n * 3) * 0.15;
       n = Math.max(0, Math.min(1, n + band));
 
@@ -78,6 +76,31 @@ function generatePlanetTexture(colors, size = 512) {
       imageData.data[idx + 1] = color.g;
       imageData.data[idx + 2] = color.b;
       imageData.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return new THREE.CanvasTexture(canvas);
+}
+
+// ─── Generate cloud texture for atmosphere ───
+function generateCloudTexture(size = 256) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(size, size);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = x / size * 4;
+      const ny = y / size * 4;
+      let n = fbm(nx + 5.3, ny + 8.1, 5);
+      n = Math.max(0, Math.min(1, n * 1.5 - 0.2));
+      const idx = (y * size + x) * 4;
+      imageData.data[idx] = 255;
+      imageData.data[idx + 1] = 255;
+      imageData.data[idx + 2] = 255;
+      imageData.data[idx + 3] = Math.floor(n * 100); // semi-transparent clouds
     }
   }
   ctx.putImageData(imageData, 0, 0);
@@ -112,7 +135,6 @@ function generateSunTexture(size = 512) {
 function createSun(scene) {
   const group = new THREE.Group();
 
-  // Sun sphere
   const geo = new THREE.SphereGeometry(5, 64, 64);
   const tex = generateSunTexture();
   const mat = new THREE.MeshBasicMaterial({ map: tex });
@@ -131,7 +153,7 @@ function createSun(scene) {
     group.add(new THREE.Mesh(glowGeo, glowMat));
   }
 
-  // Sun corona — additional glow layers (no sprite to avoid square artifacts)
+  // Sun corona
   for (let j = 0; j < 4; j++) {
     const coronaGeo = new THREE.SphereGeometry(9 + j * 3, 24, 24);
     const coronaMat = new THREE.MeshBasicMaterial({
@@ -147,9 +169,12 @@ function createSun(scene) {
 
   // Point light
   const light = new THREE.PointLight(0xffcc66, 3.0, 500);
+  light.castShadow = true;
+  light.shadow.mapSize.width = 1024;
+  light.shadow.mapSize.height = 1024;
   group.add(light);
 
-  // Ambient light — higher intensity so planets are visible
+  // Ambient light
   scene.add(new THREE.AmbientLight(0x556688, 0.8));
 
   scene.add(group);
@@ -171,6 +196,7 @@ function createPlanet(config, scene) {
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
+  mesh.receiveShadow = true;
   mesh.userData = { planetId: config.id, config };
   group.add(mesh);
 
@@ -187,6 +213,20 @@ function createPlanet(config, scene) {
   const atmosMesh = new THREE.Mesh(atmosGeo, atmosMat);
   group.add(atmosMesh);
 
+  // Animated cloud layer
+  const cloudGeo = new THREE.SphereGeometry(config.planetRadius * 1.08, 32, 32);
+  const cloudTex = generateCloudTexture();
+  const cloudMat = new THREE.MeshBasicMaterial({
+    map: cloudTex,
+    transparent: true,
+    opacity: 0.15,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    color: new THREE.Color(config.colors.atmosphere),
+  });
+  const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+  group.add(cloudMesh);
+
   // Outer glow
   const glowGeo = new THREE.SphereGeometry(config.planetRadius * 1.35, 32, 32);
   const glowMat = new THREE.MeshBasicMaterial({
@@ -196,7 +236,8 @@ function createPlanet(config, scene) {
     side: THREE.BackSide,
     blending: THREE.AdditiveBlending,
   });
-  group.add(new THREE.Mesh(glowGeo, glowMat));
+  const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+  group.add(glowMesh);
 
   // Rings
   if (config.hasRings) {
@@ -213,6 +254,7 @@ function createPlanet(config, scene) {
     });
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.rotation.x = -Math.PI / 2 + config.tilt;
+    ringMesh.receiveShadow = true;
     group.add(ringMesh);
   }
 
@@ -249,13 +291,15 @@ function createPlanet(config, scene) {
   orbitGroup.add(group);
   scene.add(orbitGroup);
 
-  // Orbit ring
-  const orbitRingGeo = new THREE.RingGeometry(config.orbitRadius - 0.05, config.orbitRadius + 0.05, 128);
+  // Orbit ring — glowing trail
+  const orbitRingGeo = new THREE.RingGeometry(config.orbitRadius - 0.08, config.orbitRadius + 0.08, 256);
   const orbitRingMat = new THREE.MeshBasicMaterial({
     color: new THREE.Color(config.colors.atmosphere),
     transparent: true,
-    opacity: 0.08,
+    opacity: 0.12,
     side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
   });
   const orbitRing = new THREE.Mesh(orbitRingGeo, orbitRingMat);
   orbitRing.rotation.x = -Math.PI / 2;
@@ -267,9 +311,13 @@ function createPlanet(config, scene) {
     orbitGroup,
     mesh,
     atmosMesh,
+    cloudMesh,
+    glowMesh,
     satellites,
     angle,
     orbitRing,
+    baseAtmosOpacity: 0.12,
+    baseGlowOpacity: 0.05,
   };
 }
 
@@ -292,53 +340,172 @@ function generateRingTexture(color, size = 256) {
   return tex;
 }
 
-// ─── Create Starfield ───
+// ─── Create Starfield (Multi-layer for parallax) ───
 function createStarfield(scene) {
-  const count = 12000;
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
+  const layers = [];
+  const layerConfigs = [
+    { count: 5000, minR: 200, maxR: 400, size: 1.5, speed: 0.00001 },  // Near
+    { count: 5000, minR: 400, maxR: 700, size: 1.0, speed: 0.000005 }, // Mid
+    { count: 4000, minR: 700, maxR: 1000, size: 0.7, speed: 0.000002 }, // Far
+  ];
 
-  for (let i = 0; i < count; i++) {
-    const r = 300 + Math.random() * 700;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+  layerConfigs.forEach(cfg => {
+    const positions = new Float32Array(cfg.count * 3);
+    const colors = new Float32Array(cfg.count * 3);
+    const sizes = new Float32Array(cfg.count);
 
-    const colorChoice = Math.random();
-    if (colorChoice < 0.3) {
-      colors[i * 3] = 0.8; colors[i * 3 + 1] = 0.85; colors[i * 3 + 2] = 1;
-    } else if (colorChoice < 0.5) {
-      colors[i * 3] = 1; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 0.7;
-    } else if (colorChoice < 0.6) {
-      colors[i * 3] = 1; colors[i * 3 + 1] = 0.6; colors[i * 3 + 2] = 0.4;
-    } else {
-      colors[i * 3] = 0.9; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 0.95;
+    for (let i = 0; i < cfg.count; i++) {
+      const r = cfg.minR + Math.random() * (cfg.maxR - cfg.minR);
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+
+      const colorChoice = Math.random();
+      if (colorChoice < 0.3) {
+        colors[i * 3] = 0.8; colors[i * 3 + 1] = 0.85; colors[i * 3 + 2] = 1;
+      } else if (colorChoice < 0.5) {
+        colors[i * 3] = 1; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 0.7;
+      } else if (colorChoice < 0.6) {
+        colors[i * 3] = 1; colors[i * 3 + 1] = 0.6; colors[i * 3 + 2] = 0.4;
+      } else {
+        colors[i * 3] = 0.9; colors[i * 3 + 1] = 0.9; colors[i * 3 + 2] = 0.95;
+      }
+      sizes[i] = Math.random() * cfg.size + 0.3;
     }
 
-    sizes[i] = Math.random() * 2 + 0.5;
-  }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    const mat = new THREE.PointsMaterial({
+      size: cfg.size,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
 
-  const mat = new THREE.PointsMaterial({
-    size: 1.2,
-    vertexColors: true,
-    transparent: true,
-    opacity: 0.9,
-    sizeAttenuation: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
+    const points = new THREE.Points(geo, mat);
+    points.userData.rotSpeed = cfg.speed;
+    scene.add(points);
+    layers.push(points);
   });
 
-  const points = new THREE.Points(geo, mat);
-  scene.add(points);
-  return points;
+  return layers;
+}
+
+// ─── Create Shooting Stars / Comets ───
+function createComets(scene) {
+  const comets = [];
+  const cometCount = 8;
+
+  for (let i = 0; i < cometCount; i++) {
+    const cometGroup = new THREE.Group();
+
+    // Comet head — bright sphere
+    const headGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const headMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+    });
+    const head = new THREE.Mesh(headGeo, headMat);
+    cometGroup.add(head);
+
+    // Comet glow
+    const glowGeo = new THREE.SphereGeometry(0.4, 8, 8);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+    });
+    cometGroup.add(new THREE.Mesh(glowGeo, glowMat));
+
+    // Comet tail — line of particles
+    const tailCount = 30;
+    const tailPositions = new Float32Array(tailCount * 3);
+    const tailColors = new Float32Array(tailCount * 3);
+    const tailSizes = new Float32Array(tailCount);
+
+    for (let j = 0; j < tailCount; j++) {
+      tailPositions[j * 3] = -j * 0.3;
+      tailPositions[j * 3 + 1] = 0;
+      tailPositions[j * 3 + 2] = 0;
+      const fade = 1 - j / tailCount;
+      tailColors[j * 3] = 0.5 + fade * 0.5;
+      tailColors[j * 3 + 1] = 0.7 + fade * 0.3;
+      tailColors[j * 3 + 2] = 1;
+      tailSizes[j] = fade * 2;
+    }
+
+    const tailGeo = new THREE.BufferGeometry();
+    tailGeo.setAttribute('position', new THREE.BufferAttribute(tailPositions, 3));
+    tailGeo.setAttribute('color', new THREE.BufferAttribute(tailColors, 3));
+    const tailMat = new THREE.PointsMaterial({
+      size: 0.8,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
+    const tail = new THREE.Points(tailGeo, tailMat);
+    cometGroup.add(tail);
+
+    scene.add(cometGroup);
+
+    comets.push({
+      group: cometGroup,
+      head,
+      headMat,
+      glowMat,
+      tailMat,
+      velocity: new THREE.Vector3(),
+      active: false,
+      lifetime: 0,
+      maxLifetime: 0,
+    });
+  }
+
+  return comets;
+}
+
+function spawnComet(comet) {
+  // Random spawn on a sphere shell
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.random() * Math.PI;
+  const r = 150 + Math.random() * 100;
+
+  comet.group.position.set(
+    r * Math.sin(phi) * Math.cos(theta),
+    r * Math.sin(phi) * Math.sin(theta) * 0.3,
+    r * Math.cos(phi)
+  );
+
+  // Velocity towards center-ish
+  const target = new THREE.Vector3(
+    (Math.random() - 0.5) * 40,
+    (Math.random() - 0.5) * 20,
+    (Math.random() - 0.5) * 40
+  );
+  comet.velocity = target.sub(comet.group.position).normalize().multiplyScalar(0.5 + Math.random() * 1.0);
+
+  // Align the comet to face its velocity
+  comet.group.lookAt(comet.group.position.clone().add(comet.velocity));
+
+  comet.active = true;
+  comet.lifetime = 0;
+  comet.maxLifetime = 200 + Math.random() * 300;
+  comet.headMat.opacity = 1;
+  comet.glowMat.opacity = 0.5;
+  comet.tailMat.opacity = 0.6;
 }
 
 // ─── Create Asteroid Belt ───
@@ -413,20 +580,21 @@ function createOuterBelt(scene) {
   return beltGroup;
 }
 
-// ─── Create Nebula Clouds ───
+// ─── Create Nebula Clouds (Volumetric-ish) ───
 function createNebula(scene) {
   const nebulaGroup = new THREE.Group();
-  const colors = [0x4400aa, 0x0044aa, 0xaa0044, 0x006688];
+  const colors = [0x4400aa, 0x0044aa, 0xaa0044, 0x006688, 0x220066, 0x004466];
 
-  for (let i = 0; i < 30; i++) {
+  // Main cloud layers
+  for (let i = 0; i < 50; i++) {
     const spriteMat = new THREE.SpriteMaterial({
       color: colors[Math.floor(Math.random() * colors.length)],
       transparent: true,
-      opacity: 0.03 + Math.random() * 0.04,
+      opacity: 0.02 + Math.random() * 0.04,
       blending: THREE.AdditiveBlending,
     });
     const sprite = new THREE.Sprite(spriteMat);
-    const r = 200 + Math.random() * 400;
+    const r = 180 + Math.random() * 500;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
     sprite.position.set(
@@ -434,12 +602,90 @@ function createNebula(scene) {
       r * Math.sin(phi) * Math.sin(theta),
       r * Math.cos(phi)
     );
-    sprite.scale.set(80 + Math.random() * 120, 80 + Math.random() * 120, 1);
+    const scale = 60 + Math.random() * 160;
+    sprite.scale.set(scale, scale, 1);
+    sprite.userData.baseOpacity = spriteMat.opacity;
+    sprite.userData.pulseSpeed = 0.0003 + Math.random() * 0.0005;
+    sprite.userData.pulseOffset = Math.random() * Math.PI * 2;
     nebulaGroup.add(sprite);
   }
 
   scene.add(nebulaGroup);
   return nebulaGroup;
+}
+
+// ─── Click Particle Burst ───
+function createParticleBurstSystem(scene) {
+  const maxParticles = 200;
+  const positions = new Float32Array(maxParticles * 3);
+  const colors = new Float32Array(maxParticles * 3);
+  const velocities = [];
+  const lifetimes = [];
+
+  for (let i = 0; i < maxParticles; i++) {
+    positions[i * 3] = 0;
+    positions[i * 3 + 1] = -9999;
+    positions[i * 3 + 2] = 0;
+    colors[i * 3] = 0; colors[i * 3 + 1] = 0.8; colors[i * 3 + 2] = 1;
+    velocities.push(new THREE.Vector3());
+    lifetimes.push({ life: 0, maxLife: 0 });
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.5,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+
+  return { points, positions, colors, velocities, lifetimes, nextIndex: 0 };
+}
+
+export function triggerParticleBurst(burstSystem, position) {
+  if (!burstSystem) return;
+  const count = 20;
+  const accentColors = [
+    [0, 0.83, 1],     // cyan
+    [1, 0, 1],         // magenta
+    [1, 0.8, 0],       // gold
+    [0, 1, 0.53],      // green
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const idx = burstSystem.nextIndex % (burstSystem.positions.length / 3);
+    burstSystem.nextIndex++;
+
+    burstSystem.positions[idx * 3] = position.x;
+    burstSystem.positions[idx * 3 + 1] = position.y;
+    burstSystem.positions[idx * 3 + 2] = position.z;
+
+    const speed = 0.1 + Math.random() * 0.3;
+    burstSystem.velocities[idx].set(
+      (Math.random() - 0.5) * speed,
+      (Math.random() - 0.5) * speed,
+      (Math.random() - 0.5) * speed
+    );
+
+    const c = accentColors[Math.floor(Math.random() * accentColors.length)];
+    burstSystem.colors[idx * 3] = c[0];
+    burstSystem.colors[idx * 3 + 1] = c[1];
+    burstSystem.colors[idx * 3 + 2] = c[2];
+
+    burstSystem.lifetimes[idx] = { life: 0, maxLife: 60 + Math.random() * 60 };
+  }
+
+  burstSystem.points.geometry.attributes.position.needsUpdate = true;
+  burstSystem.points.geometry.attributes.color.needsUpdate = true;
 }
 
 // ═══════════════════════════════════════
@@ -452,8 +698,13 @@ export function createWorld(scene) {
   const asteroidBelt = createAsteroidBelt(scene);
   const outerBelt = createOuterBelt(scene);
   const nebula = createNebula(scene);
+  const comets = createComets(scene);
+  const particleBurst = createParticleBurstSystem(scene);
 
-  return { sun, planets, starfield, asteroidBelt, outerBelt, nebula };
+  // Track hovered planet for glow effect
+  let hoveredPlanet = null;
+
+  return { sun, planets, starfield, asteroidBelt, outerBelt, nebula, comets, particleBurst, hoveredPlanet };
 }
 
 export function updateWorld(world, time) {
@@ -475,6 +726,12 @@ export function updateWorld(world, time) {
     // Rotate atmosphere
     if (planet.atmosMesh) {
       planet.atmosMesh.rotation.y += cfg.rotationSpeed * 0.7;
+    }
+
+    // Rotate cloud layer (opposite direction, different speed)
+    if (planet.cloudMesh) {
+      planet.cloudMesh.rotation.y -= cfg.rotationSpeed * 0.4;
+      planet.cloudMesh.rotation.x += cfg.rotationSpeed * 0.1;
     }
 
     // Animate satellites
@@ -504,14 +761,100 @@ export function updateWorld(world, time) {
     world.outerBelt.rotation.y -= 0.00003;
   }
 
-  // Twinkle stars
-  if (world.starfield) {
-    const sizes = world.starfield.geometry.attributes.size;
-    for (let i = 0; i < sizes.count; i += 10) {
-      sizes.array[i] = (Math.sin(time * 0.003 + i) * 0.5 + 1) * 1.5;
+  // Parallax star layers — each rotates at different speed
+  if (world.starfield && Array.isArray(world.starfield)) {
+    world.starfield.forEach(layer => {
+      layer.rotation.y += layer.userData.rotSpeed;
+    });
+
+    // Twinkle on first layer
+    const firstLayer = world.starfield[0];
+    if (firstLayer) {
+      const sizes = firstLayer.geometry.attributes.size;
+      for (let i = 0; i < sizes.count; i += 10) {
+        sizes.array[i] = (Math.sin(time * 0.003 + i) * 0.5 + 1) * 1.5;
+      }
+      sizes.needsUpdate = true;
     }
-    sizes.needsUpdate = true;
   }
+
+  // Nebula pulse
+  if (world.nebula) {
+    world.nebula.children.forEach(sprite => {
+      if (sprite.userData.baseOpacity) {
+        const pulse = Math.sin(time * sprite.userData.pulseSpeed + sprite.userData.pulseOffset);
+        sprite.material.opacity = sprite.userData.baseOpacity + pulse * 0.01;
+      }
+    });
+  }
+
+  // Update comets
+  if (world.comets) {
+    world.comets.forEach(comet => {
+      if (!comet.active) {
+        // Random chance to spawn
+        if (Math.random() < 0.002) {
+          spawnComet(comet);
+        }
+        return;
+      }
+
+      comet.lifetime++;
+      comet.group.position.add(comet.velocity);
+
+      // Fade out near end of life
+      const progress = comet.lifetime / comet.maxLifetime;
+      if (progress > 0.7) {
+        const fade = 1 - (progress - 0.7) / 0.3;
+        comet.headMat.opacity = fade;
+        comet.glowMat.opacity = fade * 0.5;
+        comet.tailMat.opacity = fade * 0.6;
+      }
+
+      if (comet.lifetime >= comet.maxLifetime) {
+        comet.active = false;
+        comet.headMat.opacity = 0;
+        comet.glowMat.opacity = 0;
+        comet.tailMat.opacity = 0;
+      }
+    });
+  }
+
+  // Update particle burst system
+  if (world.particleBurst) {
+    const pb = world.particleBurst;
+    const maxP = pb.positions.length / 3;
+    for (let i = 0; i < maxP; i++) {
+      const lt = pb.lifetimes[i];
+      if (lt.maxLife <= 0) continue;
+      lt.life++;
+      if (lt.life >= lt.maxLife) {
+        pb.positions[i * 3 + 1] = -9999;
+        lt.maxLife = 0;
+        continue;
+      }
+      pb.positions[i * 3] += pb.velocities[i].x;
+      pb.positions[i * 3 + 1] += pb.velocities[i].y;
+      pb.positions[i * 3 + 2] += pb.velocities[i].z;
+      // Slow down
+      pb.velocities[i].multiplyScalar(0.97);
+    }
+    pb.points.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // Planet hover pulse
+  world.planets.forEach(planet => {
+    const isHovered = planet === world.hoveredPlanet;
+    const targetAtmos = isHovered ? 0.35 : planet.baseAtmosOpacity;
+    const targetGlow = isHovered ? 0.2 : planet.baseGlowOpacity;
+
+    planet.atmosMesh.material.opacity += (targetAtmos - planet.atmosMesh.material.opacity) * 0.08;
+    planet.glowMesh.material.opacity += (targetGlow - planet.glowMesh.material.opacity) * 0.08;
+  });
+}
+
+export function setHoveredPlanet(world, planet) {
+  world.hoveredPlanet = planet;
 }
 
 export function getPlanetMeshes(world) {
