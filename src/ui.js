@@ -105,7 +105,7 @@ const sectionGenerators = {
         <span class="link-icon">💼</span>
         <div>
           <span class="link-label">LINKEDIN</span><br/>
-          <span class="link-value">linkedin.com/in/higgsboson1710</span>
+          <span class="link-value">abhinav-singh-yadav</span>
         </div>
       </a>
       <a class="contact-link" href="${CONTACT.github}" target="_blank">
